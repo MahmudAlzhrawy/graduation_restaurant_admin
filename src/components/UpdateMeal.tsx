@@ -5,7 +5,7 @@ import { useFormik } from "formik";
 import { useContext } from "react";
 import * as Yup from "yup";
 import { FaArrowLeft } from "react-icons/fa";
-export default function UpdateMeal({mealId}:{mealId:any}) {
+export default function UpdateMeal({mealId}:{mealId:number}) {
 const { updateMeal } = useContext(ManageRestoAdminContext);
 
 const formik = useFormik({
@@ -24,8 +24,8 @@ validationSchema: Yup.object().shape({
     CategoryId: Yup.number().required("This field is required"),
 }),
 onSubmit:async (values,{resetForm}) => {
-    const mealID = parseInt(mealId , 10);    
-    await updateMeal(values,mealID);
+  
+    await updateMeal(values,mealId);
     console.log("submitted form");
     resetForm();
 },

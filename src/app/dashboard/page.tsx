@@ -6,11 +6,13 @@ import Meals from "../meals/page";
 import Loading from "../loading";
 import { ManageRestoAdminProvider } from "../Context/ManageRestoOwnerContext";
 import MealAdd from "../addMeal/page";
+import { FaStar } from "react-icons/fa6";
 
 export default function Dashboard() {
     const [showOrders, setShowOrders] = useState(false);
     const [showMeals, setShowMeals] = useState(false);
     const [showAddMeals, setShowAddMeals] = useState(false);
+    const[showRates,setShowRates]=useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(true);
 
     const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
@@ -33,6 +35,7 @@ export default function Dashboard() {
                             setShowOrders(true);
                             setShowMeals(false);
                             setShowAddMeals(false);
+                            setShowRates(false)
                         }}
                     >
                         <FaShoppingCart size={20} />
@@ -63,6 +66,19 @@ export default function Dashboard() {
                         </div>
                         {sidebarOpen && <span className="text-lg">Add Meals</span>}
                     </li>
+                    <li
+                    className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-700 cursor-pointer transition"
+                    onClick={() => {
+                        setShowOrders(false);
+                        setShowMeals(false);
+                        setShowAddMeals(false);
+                        setShowRates(true);
+                    }}
+                >
+                    <FaStar size={20} />
+                    {sidebarOpen && <span className="text-lg">Rates</span>}
+                </li>
+
                 </ul>
 
                 {/* Settings & Logout */}

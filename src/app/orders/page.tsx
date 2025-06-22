@@ -1,3 +1,4 @@
+"use client"
 import { useContext, useState } from "react";
 import { ManageRestoAdminContext } from "../Context/ManageRestoOwnerContext";
 import { AiOutlineClose } from "react-icons/ai";

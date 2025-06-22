@@ -28,7 +28,7 @@ export default function Meals() {
                             className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300"
                         >
                             <img
-                                src={`http://citypulse.runasp.net${mealImage}`}
+                                src={`https://citypulse.runasp.net${mealImage}`}
                                 alt={mealName}
                                 className="w-full h-48 object-cover"
                             />

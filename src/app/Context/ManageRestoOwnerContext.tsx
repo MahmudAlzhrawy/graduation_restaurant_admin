@@ -1,350 +1,417 @@
-"use client"
+"use client";
+
 import { Toast } from "@/sweetalert";
-import { createContext, Dispatch, SetStateAction ,useEffect,useState} from "react";
-interface AddMeal{
-    
-    MealName: string;
-    Description: string;
-    Price: number;
-    MealImage:File;
-    CategoryId:number
+import { createContext, useEffect, useState } from "react";
+
+// ✅ [1] أنواع البيانات Interfaces
+interface AddMeal {
+MealName: string;
+Description: string;
+Price: number;
+MealImage: File|null ;
+CategoryId: number;
 }
-interface Meal{
-    id:number;
-    quantity:number;
-    mealId: number;
-    mealName: string;
-    description: string;
-    price: number;
-    mealImage: string;
-    restaurantId:number;
-    categoryId:number
+
+interface Meal {
+id: number;
+quantity: number;
+mealId: number;
+mealName: string;
+description: string;
+price: number;
+mealImage: string;
+restaurantId: number;
+categoryId: number;
 }
-interface order{
-    userId:number;
-    orderId: number;
-    restaurantId:number;
-    totalPrice: number;
-    status:string;
-    location:string;
-    phoneNumber:string;
-    orderDetails:orderedMeals[];
-    
+
+interface orderedMeals {
+mealName: string;
+quantity: number;
+subTotalPrice: number;
 }
-interface updateOrder{
-    orderId:number,
-    restaurantId:number;
-    newStatus:string;
+interface OrderAPIResponse {
+  $id: string;
+  $values: OrderAPIItem[];
 }
-interface orderedMeals{
-    mealName:string;
-    quantity: number;
-    subTotalPrice:number;
+
+interface OrderAPIItem {
+  userId: number;
+  orderId: number;
+  restaurantId: number;
+  totalPrice: number;
+  status: string;
+  location: string;
+  phoneNumber: string;
+  orderDetails?: {
+    $id: string;
+    $values: orderedMeals[];
+  };
 }
-interface Restaurant{
-    city: string,
-    rating:number,
-    restaurantId: number,
-    restaurantName: string,
-    location: string,
-    phoneNumber: string,
-    cuisineType: string,
-    restaurantImage: string,
-    status: string,
-    cityCode: string,
-    restaurantDescription:string,
-    deliveryFee: number
+
+
+interface order {
+userId: number;
+orderId: number;
+restaurantId: number;
+totalPrice: number;
+status: string;
+location: string;
+phoneNumber: string;
+orderDetails: orderedMeals[];
 }
-interface ManagerestoOwnerContext{
-    meals: Meal[];
-    orders: order[];
-    currentRestaurant: Restaurant[];
-    admintoken: string | null;
-    adminId: number | null;
-    addMeal:(Meal:AddMeal) => void;
-    delMeal:(mealId:number)=>void;
-    updateMeal:(Meal:AddMeal,mealId:number)=>void;
-    updateOrder:(ord:updateOrder)=>void;
-    delOrder:(restaurantId:number, orderId:number)=>void
+
+interface updateOrder {
+orderId: number;
+restaurantId: number;
+newStatus: string;
 }
+
+interface review {
+nameU: string;
+ratingId: number;
+userId: number;
+restaurantId: number;
+ratingValue: number;
+review: string;
+ratingDate: string;
+}
+
+interface Restaurant {
+city: string;
+rating: number;
+restaurantId: number;
+restaurantName: string;
+location: string;
+phoneNumber: string;
+cuisineType: string;
+restaurantImage: string;
+status: string;
+cityCode: string;
+restaurantDescription: string;
+deliveryFee: number;
+}
+
+interface ManagerestoOwnerContext {
+meals: Meal[];
+orders: order[];
+review: review[];
+currentRestaurant: Restaurant[];
+admintoken: string | null;
+adminId: number | null;
+addMeal: (Meal: AddMeal) => void;
+delMeal: (mealId: number) => void;
+updateMeal: (Meal: AddMeal, mealId: number) => void;
+updateOrder: (ord: updateOrder) => void;
+delOrder: (restaurantId: number, orderId: number) => void;
+removeReview: (rateId: number) => void;
+}
+
+// ✅ [2] إنشاء السياق
 export const ManageRestoAdminContext = createContext<ManagerestoOwnerContext>({
-    meals: [],
-    orders: [],
-    currentRestaurant: [],
-    admintoken:null,
-    adminId:null,
-    updateOrder:(ord:updateOrder)=>{},
-    addMeal:(Meal:AddMeal)=>{},
-    delMeal:(mealId:number)=>{},
-    updateMeal:(Meal:AddMeal,mealId:number)=>{},
-    delOrder:(restaurantId:number, orderId:number)=>{}
-})
-export const ManageRestoAdminProvider:React.FC<{children:React.ReactNode}> =({children})=>{
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
-    const [meals, setMeals] = useState<Meal[]>([]);
-    const [orders, setOrders] = useState<order[]>([]);
-    const [currentRestaurant, setCurrentRestaurant] = useState<Restaurant[]>([]);
-    const [restaurantId, setRestaurantId] = useState<number|null|any>(null);
-    const [admintoken,  setAdminToken] = useState<string|null>(localStorage.getItem("adminToken"));
-    const [adminId, setAdminId] = useState<number|null>(Number(localStorage.getItem("adminId")));
-    
-    const refresh= () => {
-        setRefreshTrigger(prev => prev + 1);
-    };
-    const addMeal=async (meal:AddMeal)=>{
-        const formDatabopj= new FormData();
-        formDatabopj.append("MealName",meal.MealName);
-        formDatabopj.append("MealImage",meal.MealImage);
-        formDatabopj.append("Description",meal.Description);
-        formDatabopj.append("Price",meal.Price.toString());
-        formDatabopj.append("CategoryId",meal.CategoryId.toString());
-        formDatabopj.append("RestaurantId",restaurantId.toString());
+meals: [],
+orders: [],
+review: [],
+currentRestaurant: [],
+admintoken: null,
+adminId: null,
+addMeal: () => {},
+delMeal: () => {},
+updateMeal: () => {},
+updateOrder: () => {},
+delOrder: () => {},
+removeReview: () => {},
+});
 
-        try{
-            const res =await fetch(`http://citypulse.runasp.net/api/RestaurantStaf/AddNewMeal`,{
-                method:'POST',
-                headers:{
-                    'Authorization': `Bearer ${admintoken}`
-                },
-                body:formDatabopj
-            })
-            if(res.ok){
-                Toast.fire({
-                    title:'Add Meal',
-                    icon:"success",
-                    text:'The Meal Added successfully',
-                    timer:1500
-                })
-                console.log(" Added Meal",{...meal,restaurantId});
-                refresh();
-            }
-            else{
-                Toast.fire({
-                    title:'Add Meal',
-                    icon:"error",
-                    text:"The Meal Added Faild ",
-                    timer:1500
-                })
-                console.log(" Added Meal",{...meal,restaurantId});
+// ✅ [3] Provider
+export const ManageRestoAdminProvider: React.FC<{ children: React.ReactNode }> = ({
+children,
+}) => {
+// ✅ [A] الحالة
+const [meals, setMeals] = useState<Meal[]>([]);
+const [orders, setOrders] = useState<order[]>([]);
+const [review, setReviews] = useState<review[]>([]);
+const [currentRestaurant, setCurrentRestaurant] = useState<Restaurant[]>([]);
+const [restaurantId, setRestaurantId] = useState<number | null>(null);
+const [refreshTrigger, setRefreshTrigger] = useState(0);
+const [admintoken, setAdminToken] = useState<string | null>(null);
+const [adminId, setAdminId] = useState<number | null>(null);
 
-            }
-        }catch(e){
-            console.log("Error",e)
-        }
-    }
-    const updateMeal= async (Meal:AddMeal,mealId:number)=>{
-        console.log("Welcome in update")
-        const formDatabopj= new FormData();
-        formDatabopj.append("MealName",Meal.MealName);
-        formDatabopj.append("MealImage",Meal.MealImage);
-        formDatabopj.append("Description",Meal.Description);
-        formDatabopj.append("Price",Meal.Price.toString());
-        formDatabopj.append("CategoryId",Meal.CategoryId.toString());
-        formDatabopj.append("RestaurantId",restaurantId.toString());
+// ✅ [B] تحميل admin info من localStorage
+useEffect(() => {
+if (typeof window !== "undefined") {
+    const token = localStorage.getItem("adminToken");
+    const id = localStorage.getItem("adminId");
 
-
-        try{
-            const res =await fetch(`http://citypulse.runasp.net/api/RestaurantStaf/UpdateMeal/${mealId}`,{
-                method:'PUT',
-                headers:{
-                    'Authorization': `Bearer ${admintoken}`
-                },
-                body:formDatabopj,
-            
-            })
-            if(res.ok){
-                Toast.fire({
-                    title:'Update Meal',
-                    icon:"success",
-                    text:'The Meal Updated successfully',
-                    timer:1500
-                })
-                console.log(" updated Meal",{...Meal,restaurantId});
-            }
-            else{
-                Toast.fire({
-                    title:'Update Meal',
-                    icon:"error",
-                    text:"The Meal updated Faild ",
-                    timer:1500
-                })
-                console.log(" update Meal",{...Meal,restaurantId});
-
-            }
-            refresh();
-        }catch(e){
-            console.log("Error",e)
-        }
-    }
-const updateOrder=async(ord:updateOrder)=>{
-        const res = await fetch('http://citypulse.runasp.net/api/RestaurantStaf/update-status',{
-            method:'PUT',
-            headers:{
-               "Content-Type": "application/json",
-                'Authorization': `Bearer ${admintoken}`
-            },
-            body:JSON.stringify({
-                ...ord
-            })
-        })
-        if(res.ok){
-            Toast.fire({
-                title:"Update order status",
-                icon:"success",
-                text:"Updated Successfully",
-                timer:1500
-            })
-        refresh()
-        }
-        else{
-            Toast.fire({
-                title:"Update order status",
-                icon:"error",
-                text:"Updated Failed",
-                timer:1500
-            })
-        }
-    }
-    const delOrder= async(restaurantId:number,orderId:number)=>{
-        const res= await fetch(`http://citypulse.runasp.net/api/RestaurantStaf/DeleteOrder?OrderId=${orderId}&RestaurantId=${restaurantId}`,{
-            method:'DELETE',
-            headers:{
-                'Authorization': `Bearer ${admintoken}`
-            }
-            
-        })
-        if(res.ok){
-            Toast.fire({
-                title:"Delete Order",
-                icon:"success",
-                text:"Deleted Successfully",
-                timer:1500
-            })
-            const updatedOrders = orders.filter(order=>order.restaurantId!==restaurantId || order.orderId!==orderId)
-            setOrders(updatedOrders)
-        }
-        else{
-            Toast.fire({
-                title:"Delete Order",
-                icon:"warning",
-                text:"Deleted Faild",
-                timer:1500
-            })
-        }
-    }
-    const delMeal = async(mealId:number)=>{
-        const res= await fetch(`http://citypulse.runasp.net/api/RestaurantStaf/DeleteMeal?mealId=${mealId}&restaurantId=${restaurantId}`,{
-            method:'DELETE',
-            headers:{
-                'Authorization': `Bearer ${admintoken}`
-            }
-            
-        })
-        if(res.ok){
-            Toast.fire({
-                title:"Delete Meal",
-                icon:"success",
-                text:"Deleted Successfully",
-                timer:1500
-            })
-            const updatesMeals = meals.filter(meal=>meal.mealId !== mealId);
-        setMeals(updatesMeals);
-        }
-        else{
-            Toast.fire({
-                title:"Delete Meal",
-                icon:"warning",
-                text:"Deleted Faild",
-                timer:1500
-            })
-        }
-        
-    }
-    useEffect(() => {
-        
-        if (adminId) {
-            const fetchRestaurant = async () => {
-                try {
-                    const response = await fetch( `http://citypulse.runasp.net/api/RestaurantStaf/(GetRestaurantbyAdminId)?adminId=${adminId}`,{
-                        method:"GET",
-                        headers:{
-                            'Authorization': `Bearer ${admintoken}`
-                        }
-                    })
-                    const data = await response.json();
-                    setCurrentRestaurant(data);
-                    console.log("Fetched idre Data:", data);
-                    setRestaurantId(data.restaurantId); 
-                } catch (e) {
-                    console.error("An error occurred while fetching restaurant", e);
-                }
-            };
-
-            fetchRestaurant();
-        }
-    }, [adminId]);
-    useEffect(() => {
-        if (restaurantId !== null) {
-            const fetchMeals = async () => {
-                try {
-                    const response = await fetch(`http://citypulse.runasp.net/api/Restaurant/AllMeals/${restaurantId}`);
-                    const data = await response.json();
-                    console.log("Fetched Meals:", data);
-                    setMeals(data.$values || []);
-                } catch (e) {
-                    console.error("An error occurred while fetching meals", e);
-                }
-            };
-    
-            fetchMeals();
-        }
-    }, [restaurantId,refreshTrigger]); 
-   
-    useEffect(()=>{
-        console.log(adminId , admintoken)
-        const fetchedOrders =async()=>{
-            try{
-                const response = await fetch(`http://citypulse.runasp.net/api/RestaurantStaf/GetOrdersByAdminId/${adminId}`,{
-                    method:'GET',
-                    headers:{
-                        'Authorization': `Bearer ${admintoken}`
-                    }
-                })
-                const data = await response.json()
-                const formattedOrders = data?.$values?.map((order: any) => ({
-                    userId: order.userId,
-                    orderId: order.orderId,
-                    restaurantId: order.restaurantId,
-                    totalPrice: order.totalPrice,
-                    status: order.status,
-                    location: order.location,
-                    phoneNumber: order.phoneNumber,
-                    orderDetails: order.orderDetails?.$values || []
-                })) || [];
-                console.log("orders",data)
-                setOrders(formattedOrders);
-                
-            }catch(e){
-                console.error('An error occurred while fetching orders',e)
-            }
-        }
-        fetchedOrders()
-    },[refreshTrigger])
-
-    return(
-        <ManageRestoAdminContext.Provider value={{
-            meals,
-            orders,
-            currentRestaurant,
-            admintoken,
-            adminId,
-            addMeal,
-            updateOrder,
-            delOrder,
-            delMeal,
-            updateMeal,
-        }}>
-            {children}
-        </ManageRestoAdminContext.Provider>
-    )
+    setAdminToken(token);
+    setAdminId(id ? Number(id) : null);
 }
+}, []);
+
+// ✅ [C] تحميل بيانات المطعم
+useEffect(() => {
+if (adminId && admintoken) {
+    const fetchRestaurant = async () => {
+    try {
+        const res = await fetch(
+        `https://citypulse.runasp.net/api/RestaurantStaf/(GetRestaurantbyAdminId)?adminId=${adminId}`,
+        {
+            headers: { Authorization: `Bearer ${admintoken}` },
+        }
+        );
+        const data = await res.json();
+        setCurrentRestaurant(data ? [data] : []);
+        setRestaurantId(data.restaurantId);
+    } catch (e) {
+        console.error("Error fetching restaurant", e);
+    }
+    };
+
+    fetchRestaurant();
+}
+}, [adminId, admintoken]);
+
+// ✅ [D] تحميل الوجبات
+useEffect(() => {
+if (restaurantId) {
+    const fetchMeals = async () => {
+    try {
+        const res = await fetch(
+        `https://citypulse.runasp.net/api/Restaurant/AllMeals/${restaurantId}`
+        );
+        const data = await res.json();
+        setMeals(data.$values || []);
+    } catch (e) {
+        console.error("Error fetching meals", e);
+    }
+    };
+
+    fetchMeals();
+}
+}, [restaurantId, refreshTrigger]);
+
+// ✅ [E] تحميل الطلبات
+useEffect(() => {
+if (adminId && admintoken) {
+const fetchOrders = async () => {
+try {
+const res = await fetch(
+    `https://citypulse.runasp.net/api/RestaurantStaf/GetOrdersByAdminId/${adminId}`,
+    {
+    headers: {
+        Authorization: `Bearer ${admintoken}`,
+    },
+    }
+);
+
+const contentType = res.headers.get("content-type");
+
+if (res.ok) {
+    if (contentType && contentType.includes("application/json")) {
+    const data:OrderAPIResponse = await res.json();
+    const formatted = data?.$values?.map((o:OrderAPIItem) => ({
+        userId: o.userId,
+        orderId: o.orderId,
+        restaurantId: o.restaurantId,
+        totalPrice: o.totalPrice,
+        status: o.status,
+        location: o.location,
+        phoneNumber: o.phoneNumber,
+        orderDetails: o.orderDetails?.$values || [],
+    }));
+    setOrders(formatted || []);
+    } else {
+    const text = await res.text();
+    console.warn("Received non-JSON response:", text);
+    setOrders([]); // عشان تفضي اللي قبلها لو مفيش طلبات
+    }
+} else {
+    const errorText = await res.text();
+    console.error("API Error:", errorText);
+}
+} catch (e) {
+console.error("Error fetching orders", e);
+}
+};
+
+fetchOrders();
+}
+}, [refreshTrigger, adminId, admintoken]);
+
+
+// ✅ [F] تحميل التقييمات
+useEffect(() => {
+console.log("adminId:", adminId);
+console.log("token:", admintoken);
+if (restaurantId) {
+    const fetchReviews = async () => {
+    try {
+        const res = await fetch(
+        `https://citypulse.runasp.net/api/Restaurant/AllRestaurantRating/${restaurantId}`
+        );
+        const data = await res.json();
+        setReviews(data.$values || []);
+    } catch (e) {
+        console.error("Error fetching reviews", e);
+    }
+    };
+
+    fetchReviews();
+}
+}, [restaurantId]);
+
+// ✅ [G] تحديث حالة الطلب
+const updateOrder = async (ord: updateOrder) => {
+const res = await fetch(
+    `https://citypulse.runasp.net/api/RestaurantStaf/update-status`,
+    {
+    method: "PUT",
+    headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${admintoken}`,
+    },
+    body: JSON.stringify(ord),
+    }
+);
+
+if (res.ok) {
+    Toast.fire({ title: "Status Updated", icon: "success" });
+    setRefreshTrigger((prev) => prev + 1);
+} else {
+    Toast.fire({ title: "Status Update Failed", icon: "error" });
+}
+};
+
+// ✅ [H] إضافة وجبة
+const addMeal = async (meal: AddMeal) => {
+const form = new FormData();
+form.append("MealName", meal.MealName);
+form.append("MealImage", meal.MealImage!);
+form.append("Description", meal.Description);
+form.append("Price", meal.Price.toString());
+form.append("CategoryId", meal.CategoryId.toString());
+form.append("RestaurantId", restaurantId!.toString());
+
+const res = await fetch(
+    `https://citypulse.runasp.net/api/RestaurantStaf/AddNewMeal`,
+    {
+    method: "POST",
+    headers: { Authorization: `Bearer ${admintoken}` },
+    body: form,
+    }
+);
+
+if (res.ok) {
+    Toast.fire({ title: "Meal Added", icon: "success" });
+    setRefreshTrigger((prev) => prev + 1);
+} else {
+    Toast.fire({ title: "Add Meal Failed", icon: "error" });
+}
+};
+
+// ✅ [I] تحديث وجبة
+const updateMeal = async (meal: AddMeal, mealId: number) => {
+const form = new FormData();
+form.append("MealName", meal.MealName);
+form.append("MealImage", meal.MealImage!);
+form.append("Description", meal.Description);
+form.append("Price", meal.Price.toString());
+form.append("CategoryId", meal.CategoryId.toString());
+form.append("RestaurantId", restaurantId!.toString());
+
+const res = await fetch(
+    `https://citypulse.runasp.net/api/RestaurantStaf/UpdateMeal/${mealId}`,
+    {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${admintoken}` },
+    body: form,
+    }
+);
+
+if (res.ok) {
+    Toast.fire({ title: "Meal Updated", icon: "success" });
+    setRefreshTrigger((prev) => prev + 1);
+} else {
+    Toast.fire({ title: "Update Failed", icon: "error" });
+}
+};
+
+// ✅ [J] حذف وجبة
+const delMeal = async (mealId: number) => {
+const res = await fetch(
+    `https://citypulse.runasp.net/api/RestaurantStaf/DeleteMeal?mealId=${mealId}&restaurantId=${restaurantId}`,
+    {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${admintoken}` },
+    }
+);
+
+if (res.ok) {
+    Toast.fire({ title: "Meal Deleted", icon: "success" });
+    setMeals((prev) => prev.filter((m) => m.mealId !== mealId));
+} else {
+    Toast.fire({ title: "Delete Failed", icon: "error" });
+}
+};
+
+// ✅ [K] حذف طلب
+const delOrder = async (restaurantId: number, orderId: number) => {
+const res = await fetch(
+    `https://citypulse.runasp.net/api/RestaurantStaf/DeleteOrder?OrderId=${orderId}&RestaurantId=${restaurantId}`,
+    {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${admintoken}` },
+    }
+);
+
+if (res.ok) {
+    Toast.fire({ title: "Order Deleted", icon: "success" });
+    setOrders((prev) =>
+    prev.filter(
+        (o) => o.restaurantId !== restaurantId || o.orderId !== orderId
+    )
+    );
+} else {
+    Toast.fire({ title: "Delete Failed", icon: "error" });
+}
+};
+
+// ✅ [L] حذف تقييم
+const removeReview = async (rateId: number) => {
+const res = await fetch(
+    `https://citypulse.runasp.net/api/RestaurantStaf/DeleteCommentById?id=${restaurantId}`,
+    {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${admintoken}` },
+    }
+);
+
+if (res.ok) {
+    Toast.fire({ title: "Review Deleted", icon: "success" });
+    setReviews((prev) => prev.filter((r) => r.ratingId !== rateId));
+} else {
+    Toast.fire({ title: "Delete Failed", icon: "error" });
+}
+};
+
+// ✅ [Z] إرجاع المزود
+return (
+<ManageRestoAdminContext.Provider
+    value={{
+    meals,
+    orders,
+    currentRestaurant,
+    review,
+    admintoken,
+    adminId,
+    addMeal,
+    updateMeal,
+    delMeal,
+    delOrder,
+    updateOrder,
+    removeReview,
+    }}
+>
+    {children}
+</ManageRestoAdminContext.Provider>
+);
+};
