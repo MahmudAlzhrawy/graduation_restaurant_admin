@@ -1,7 +1,7 @@
 "use client";
 
 import { Toast } from "@/sweetalert";
-import { createContext, useEffect, useState } from "react";
+import { createContext, Dispatch, SetStateAction, useEffect, useState } from "react";
 
 // ✅ [1] أنواع البيانات Interfaces
 interface AddMeal {
@@ -90,14 +90,29 @@ cityCode: string;
 restaurantDescription: string;
 deliveryFee: number;
 }
+interface Transaction{
+    transactionId: number,
+    userId: number,
+    transactionDate:string
+    amount:number,
+    paymentMethod: string,
+    status: string,
+    transactionType:string,
+    referenceId: number
+}
 
 interface ManagerestoOwnerContext {
+counter:number;
 meals: Meal[];
 orders: order[];
 review: review[];
+transaction?: Transaction;
 currentRestaurant: Restaurant[];
 admintoken: string | null;
 adminId: number | null;
+setcounter:Dispatch<SetStateAction<number>>;
+updateTransaction:(transactionId:number,newStatus:string)=>void;
+getTrnsactions:(orderId:number)=>void;
 addMeal: (Meal: AddMeal) => void;
 delMeal: (mealId: number) => void;
 updateMeal: (Meal: AddMeal, mealId: number) => void;
@@ -106,14 +121,20 @@ delOrder: (restaurantId: number, orderId: number) => void;
 removeReview: (rateId: number) => void;
 }
 
+
 // ✅ [2] إنشاء السياق
 export const ManageRestoAdminContext = createContext<ManagerestoOwnerContext>({
+counter:0,
 meals: [],
 orders: [],
 review: [],
+transaction:undefined,
 currentRestaurant: [],
 admintoken: null,
 adminId: null,
+setcounter:()=>{},
+updateTransaction:()=>{},
+getTrnsactions:()=>{},
 addMeal: () => {},
 delMeal: () => {},
 updateMeal: () => {},
@@ -135,7 +156,8 @@ const [restaurantId, setRestaurantId] = useState<number | null>(null);
 const [refreshTrigger, setRefreshTrigger] = useState(0);
 const [admintoken, setAdminToken] = useState<string | null>(null);
 const [adminId, setAdminId] = useState<number | null>(null);
-
+const [transaction,setTransaction]=useState<Transaction |undefined>(undefined)
+const[counter,setcounter]=useState<number>(0)
 // ✅ [B] تحميل admin info من localStorage
 useEffect(() => {
 if (typeof window !== "undefined") {
@@ -235,29 +257,38 @@ console.error("Error fetching orders", e);
 
 fetchOrders();
 }
-}, [refreshTrigger, adminId, admintoken]);
+}, [refreshTrigger, adminId, admintoken,counter]);
 
 
 // ✅ [F] تحميل التقييمات
 useEffect(() => {
-console.log("adminId:", adminId);
-console.log("token:", admintoken);
-if (restaurantId) {
-    const fetchReviews = async () => {
-    try {
-        const res = await fetch(
-        `https://citypulse.runasp.net/api/Restaurant/AllRestaurantRating/${restaurantId}`
-        );
-        const data = await res.json();
-        setReviews(data.$values || []);
-    } catch (e) {
-        console.error("Error fetching reviews", e);
-    }
-    };
+    console.log("adminId:", adminId);
+    console.log("token:", admintoken);
+    console.log("resto id ", restaurantId)
+    if (restaurantId) {
+        const fetchReviews = async () => {
+            try {
+                const res = await fetch(
+                    `https://citypulse.runasp.net/api/Restaurant/AllRestaurantRating /${restaurantId}`
+                );
 
-    fetchReviews();
-}
-}, [restaurantId]);
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+
+                const text = await res.text();
+                const data = text ? JSON.parse(text) : { $values: [] };
+                console.log(data)
+                setReviews(data.$values || []);
+            } catch (e) {
+                console.error("Error fetching reviews", e);
+            }
+        };
+
+        fetchReviews();
+    }
+}, [counter]);
+
 
 // ✅ [G] تحديث حالة الطلب
 const updateOrder = async (ord: updateOrder) => {
@@ -392,11 +423,58 @@ if (res.ok) {
     Toast.fire({ title: "Delete Failed", icon: "error" });
 }
 };
+const getTrnsactions = async (orderId: number) => {
+    if (!orderId) return;
+
+    try {
+        const res = await fetch(`https://citypulse.runasp.net/api/User/GetTransaction?ReferenceId=${orderId}&type=Order`, {
+            method: "GET",
+            headers: { Authorization: `Bearer ${admintoken}` },
+        });
+
+        if (res.ok) {
+            const data: Transaction = await res.json();
+            console.log("✅ fetched transaction successfully", data);
+            setTransaction(data);
+        } else {
+            const errorText = await res.text(); // طباعة محتوى الاستجابة الخطأ
+            console.log("❌", res.status, errorText);
+        }
+    } catch (error) {
+        console.error("❌ Fetch error:", error);
+    }
+};
+
+const updateTransaction=async(transactionId:number,newStatus:string)=>{
+    const res= await fetch(`https://citypulse.runasp.net/api/User/UpdateTransactionStatus?transactionId=${transactionId}&newStatus=${newStatus}`,{
+        method:'PUT',
+        headers: { Authorization: `Bearer ${admintoken}` },
+
+    })
+    if (res.ok) {
+            Toast.fire({
+                title:"transaction status Updeted successfully",
+                icon:"success",
+            })
+            console.log("✅ updated transaction successfully");
+        
+        } else {
+            const errorText = await res.text(); // طباعة محتوى الاستجابة الخطأ
+            console.log("❌", res.status, errorText);
+        }
+
+}
 
 // ✅ [Z] إرجاع المزود
 return (
 <ManageRestoAdminContext.Provider
+
     value={{
+    counter,
+    setcounter,
+    transaction,
+    updateTransaction,
+    getTrnsactions,
     meals,
     orders,
     currentRestaurant,

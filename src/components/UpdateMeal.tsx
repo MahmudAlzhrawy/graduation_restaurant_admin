@@ -42,7 +42,7 @@ return (
           Back to Meals
         </Link>
 
-    <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Add New Meal</h2>
+    <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Edit Meal</h2>
     <form onSubmit={formik.handleSubmit} className="space-y-5">
         <div>
         <input

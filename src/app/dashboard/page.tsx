@@ -1,21 +1,45 @@
-"use client"
+"use client";
 import { useState } from "react";
 import { FaUtensils, FaPlus, FaPizzaSlice, FaShoppingCart, FaCog, FaSignOutAlt, FaBars } from "react-icons/fa";
+import { FaStar } from "react-icons/fa6";
 import Orders from "../orders/page";
 import Meals from "../meals/page";
-import Loading from "../loading";
-import { ManageRestoAdminProvider } from "../Context/ManageRestoOwnerContext";
 import MealAdd from "../addMeal/page";
-import { FaStar } from "react-icons/fa6";
+import Rate from "@/components/Rateings";
+import { ManageRestoAdminProvider } from "../Context/ManageRestoOwnerContext";
 
 export default function Dashboard() {
-    const [showOrders, setShowOrders] = useState(false);
-    const [showMeals, setShowMeals] = useState(false);
-    const [showAddMeals, setShowAddMeals] = useState(false);
-    const[showRates,setShowRates]=useState(false);
+    const [activeTab, setActiveTab] = useState<string>("welcome");
     const [sidebarOpen, setSidebarOpen] = useState(true);
 
     const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+
+    const navItems = [
+        { id: "orders", label: "Orders", icon: <FaShoppingCart size={20} /> },
+        { id: "meals", label: "Meals", icon: <FaPizzaSlice size={20} /> },
+        { id: "addMeals", label: "Add Meals", icon: <><FaUtensils size={20} /><FaPlus size={14} /></> },
+        { id: "rates", label: "Rates", icon: <FaStar size={20} /> },
+    ];
+
+    const renderContent = () => {
+        switch (activeTab) {
+            case "orders":
+                return <Orders />;
+            case "meals":
+                return <Meals />;
+            case "addMeals":
+                return <MealAdd />;
+            case "rates":
+                return <Rate />;
+            default:
+                return (
+                    <div className="text-center mt-20 text-gray-700 animate-fadeIn">
+                        <h1 className="text-4xl font-bold mb-4">🎉 Welcome to the Dashboard</h1>
+                        <p className="text-lg">Please select a section from the sidebar to get started.</p>
+                    </div>
+                );
+        }
+    };
 
     return (
         <div className="flex h-screen overflow-hidden font-sans">
@@ -29,62 +53,26 @@ export default function Dashboard() {
                 </div>
 
                 <ul className="flex flex-col gap-2 px-4 mt-6">
-                    <li
-                        className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-700 cursor-pointer transition"
-                        onClick={() => {
-                            setShowOrders(true);
-                            setShowMeals(false);
-                            setShowAddMeals(false);
-                            setShowRates(false)
-                        }}
-                    >
-                        <FaShoppingCart size={20} />
-                        {sidebarOpen && <span className="text-lg">Orders</span>}
-                    </li>
-                    <li
-                        className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-700 cursor-pointer transition"
-                        onClick={() => {
-                            setShowOrders(false);
-                            setShowMeals(true);
-                            setShowAddMeals(false);
-                        }}
-                    >
-                        <FaPizzaSlice size={20} />
-                        {sidebarOpen && <span className="text-lg">Meals</span>}
-                    </li>
-                    <li
-                        className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-700 cursor-pointer transition"
-                        onClick={() => {
-                            setShowOrders(false);
-                            setShowMeals(false);
-                            setShowAddMeals(true);
-                        }}
-                    >
-                        <div className="flex items-center gap-1">
-                            <FaUtensils size={20} />
-                            <FaPlus size={14} />
-                        </div>
-                        {sidebarOpen && <span className="text-lg">Add Meals</span>}
-                    </li>
-                    <li
-                    className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-700 cursor-pointer transition"
-                    onClick={() => {
-                        setShowOrders(false);
-                        setShowMeals(false);
-                        setShowAddMeals(false);
-                        setShowRates(true);
-                    }}
-                >
-                    <FaStar size={20} />
-                    {sidebarOpen && <span className="text-lg">Rates</span>}
-                </li>
-
+                    {navItems.map((item) => (
+                        <li
+                            key={item.id}
+                            className={`p-2 rounded-md transition cursor-pointer ${
+                                activeTab === item.id ? "bg-white/60 text-white" : "hover:bg-gray-700"
+                            }`}
+                            onClick={() => setActiveTab(item.id)}
+                        >
+                            <a className="flex items-center gap-3">
+                                {item.icon}
+                                {sidebarOpen && <span className="text-lg">{item.label}</span>}
+                            </a>
+                        </li>
+                    ))}
                 </ul>
 
                 {/* Settings & Logout */}
                 <div className="absolute bottom-6 left-0 w-full px-4">
                     <div className="flex justify-between">
-                        <FaSignOutAlt size={30} className="cursor-pointer hover:text-red-400" onClick={() => window.location.href="/"} />
+                        <FaSignOutAlt size={30} className="cursor-pointer hover:text-red-400" onClick={() => window.location.href = "/"} />
                         <FaCog size={30} className="cursor-pointer hover:text-gray-400" />
                     </div>
                 </div>
@@ -97,13 +85,10 @@ export default function Dashboard() {
                 </button>
             </div>
 
-            {/* Content */}
+            {/* Main content */}
             <div className="flex-1 bg-gray-100 overflow-y-auto p-6">
                 <ManageRestoAdminProvider>
-                    {showOrders && <Orders />}
-                    {showMeals && <Meals />}
-                    {showAddMeals && <MealAdd />}
-                    {!showOrders && !showMeals && !showAddMeals && <Loading />}
+                    {renderContent()}
                 </ManageRestoAdminProvider>
             </div>
         </div>
