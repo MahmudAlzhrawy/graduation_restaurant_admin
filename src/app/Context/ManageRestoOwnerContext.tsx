@@ -409,7 +409,7 @@ if (res.ok) {
 // ✅ [L] حذف تقييم
 const removeReview = async (rateId: number) => {
 const res = await fetch(
-    `https://citypulse.runasp.net/api/RestaurantStaf/DeleteCommentById?id=${restaurantId}`,
+    `https://citypulse.runasp.net/api/RestaurantStaf/DeleteCommentById?id=${rateId}`,
     {
     method: "DELETE",
     headers: { Authorization: `Bearer ${admintoken}` },
